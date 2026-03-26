@@ -21,24 +21,24 @@ model communicate exclusively via PI-XML files:
                                     │          │
                                     ▼          │
                     ┌───────────────────────────────────┐
-                    │        MODEL ADAPTER               │
-                    │                                    │
-                    │  ┌──────────────┐                  │
-                    │  │ pre_adapter  │  PI-XML → CSV    │
-                    │  │   .py        │  + config.yml    │
-                    │  └──────┬───────┘                  │
-                    │         │                          │
-                    │         ▼                          │
-                    │  ┌──────────────┐                  │
-                    │  │ run_model    │  Load LSTM       │
-                    │  │   .py        │  → inference     │
-                    │  └──────┬───────┘  → predictions   │
-                    │         │                          │
-                    │         ▼                          │
-                    │  ┌──────────────┐                  │
-                    │  │ post_adapter │  predictions     │
-                    │  │   .py        │  → PI-XML        │
-                    │  └──────────────┘                  │
+                    │        MODEL ADAPTER              │
+                    │                                   │
+                    │  ┌──────────────┐                 │
+                    │  │ pre_adapter  │  PI-XML → CSV   │
+                    │  │   .py        │  + config.yml   │
+                    │  └──────┬───────┘                 │
+                    │         │                         │
+                    │         ▼                         │
+                    │  ┌──────────────┐                 │
+                    │  │ run_model    │  Load LSTM      │
+                    │  │   .py        │  → inference    │
+                    │  └──────┬───────┘  → predictions  │
+                    │         │                         │
+                    │         ▼                         │
+                    │  ┌──────────────┐                 │
+                    │  │ post_adapter │  predictions    │
+                    │  │   .py        │  → PI-XML       │
+                    │  └──────────────┘                 │
                     └───────────────────────────────────┘
 ```
 
