@@ -1,0 +1,72 @@
+# =============================================================================
+# FEWS NeuralHydrology Adapter Configuration
+# =============================================================================
+# This file maps FEWS PI-XML parameters/locations to NeuralHydrology
+# run configuration. Place alongside the adapter scripts in the FEWS
+# module bin directory.
+
+# --- NeuralHydrology model paths ---
+neuralhydrology:
+  # Path to the trained run directory (contains config.yml, model checkpoints)
+  run_dir: "../model/runs/my_lstm_run"
+  # Epoch to load (null = last epoch)
+  epoch: null
+  # Device: "cpu" or "cuda:0"
+  device: "cpu"
+  # Sequence length needed for LSTM spin-up (days before T0)
+  # This should match seq_length in the NH config
+  seq_length: 365
+
+# --- FEWS ↔ NeuralHydrology parameter mapping ---
+# Maps FEWS PI-XML parameterIds to NH dynamic_inputs feature names
+parameter_mapping:
+  input:
+    # FEWS parameterId → NH feature name
+    P.obs: "total_precipitation"
+    T.obs: "temperature"
+    ET.obs: "potential_evapotranspiration"
+    RH.obs: "relative_humidity"
+    WS.obs: "wind_speed"
+    RAD.obs: "shortwave_radiation"
+  output:
+    # NH target variable → FEWS parameterId
+    QObs_mm_per_day: "Q.simulated"
+
+# --- FEWS ↔ NeuralHydrology location mapping ---
+# Maps FEWS locationIds to NeuralHydrology basin IDs
+location_mapping:
+  # FEWS locationId: NH basin_id
+  "gauge_01234": "01234500"
+  "gauge_05678": "05678900"
+
+# --- Static attributes ---
+# If your NH model uses static catchment attributes, map them here.
+# These can be exported from FEWS as a separate PI-XML parameter file
+# or embedded in the adapter config for fixed catchments.
+static_attributes:
+  "01234500":
+    area_gages2: 2050.0
+    elev_mean: 450.0
+    slope_mean: 0.015
+    soil_depth: 1.2
+  "05678900":
+    area_gages2: 830.0
+    elev_mean: 320.0
+    slope_mean: 0.022
+    soil_depth: 0.9
+
+# --- File naming conventions ---
+files:
+  # Filenames used in the FEWS General Adapter exportDir / importDir
+  input_timeseries: "input_timeseries.xml"
+  output_timeseries: "output_timeseries.xml"
+  run_info: "run_info.xml"
+  diagnostics: "diag_neuralhydrology.xml"
+  state_in: "state_in.xml"
+  state_out: "state_out.xml"
+
+# --- Missing value ---
+missing_value: -999.0
+
+# --- Time zone (offset from UTC) ---
+time_zone: 0.0

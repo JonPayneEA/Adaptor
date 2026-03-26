@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  FEWS General Adapter Configuration for NeuralHydrology LSTM
+  ============================================================
+  
+  Place this file in your FEWS ModuleConfigFiles directory.
+  Adjust paths to match your FEWS installation.
+  
+  The General Adapter orchestrates:
+    1. Export: FEWS exports PI-XML timeseries to the module's input dir
+    2. Pre-adapter: Converts PI-XML → NeuralHydrology format
+    3. Module: Runs the LSTM inference
+    4. Post-adapter: Converts predictions → PI-XML
+    5. Import: FEWS imports the PI-XML results
+-->
+
+<generalAdapterRun xmlns="http://www.wldelft.nl/fews"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.wldelft.nl/fews 
+                   http://fews.wldelft.nl/schemas/version1.0/generalAdapterRun.xsd">
+
+  <!-- ================================================================
+       GENERAL SECTION
+       ================================================================ -->
+  <general>
+    <!-- Root directory for the module adapter files -->
+    <rootDir>%ROOT_DIR%</rootDir>
+    
+    <!-- Working directory for this run (FEWS creates unique per-run) -->
+    <workDir>%WORK_DIR%</workDir>
+    
+    <!-- Where FEWS exports PI-XML input files -->
+    <exportDir>%WORK_DIR%/input</exportDir>
+    
+    <!-- Where FEWS reads PI-XML output files -->
+    <importDir>%WORK_DIR%/output</importDir>
+    
+    <!-- Diagnostics file (read by FEWS after each adapter phase) -->
+    <dumpFileDir>%WORK_DIR%</dumpFileDir>
+    <dumpDir>%WORK_DIR%/dump</dumpDir>
+    
+    <!-- Module binary / script directory -->
+    <binDir>%ROOT_DIR%/Modules/neuralhydrology/bin</binDir>
+    
+    <!-- Missing value convention -->
+    <missVal>-999.0</missVal>
+    
+    <!-- All times in UTC -->
+    <timeZone>0.0</timeZone>
+    
+    <!-- PI version -->
+    <piVersion>1.24</piVersion>
+  </general>
+
+  <!-- ================================================================
+       EXPORT ACTIVITIES
+       Exports data FROM FEWS TO the adapter's input directory
+       ================================================================ -->
+  <activities>
+    
+    <!-- Export the run info file -->
+    <exportRunFileActivity>
+      <exportFile>input/run_info.xml</exportFile>
+      <properties>
+        <!-- Include properties needed by the adapter -->
+      </properties>
+    </exportRunFileActivity>
+
+    <!-- Export forcing timeseries (precipitation, temperature, etc.) -->
+    <exportTimeSeriesActivity>
+      <exportFile>input/input_timeseries.xml</exportFile>
+      
+      <!-- Precipitation -->
+      <timeSeriesSet>
+        <moduleInstanceId>ImportMeteo</moduleInstanceId>
+        <valueType>scalar</valueType>
+        <parameterId>P.obs</parameterId>
+        <locationSetId>LSTM_Catchments</locationSetId>
+        <timeSeriesType>external historical</timeSeriesType>
+        <timeStep unit="second" multiplier="86400"/>
+        <!-- Export enough spin-up data for the LSTM sequence length -->
+        <relativeViewPeriod unit="day" start="-730" end="0"/>
+        <readWriteMode>read only</readWriteMode>
+      </timeSeriesSet>
+      
+      <!-- Temperature -->
+      <timeSeriesSet>
+        <moduleInstanceId>ImportMeteo</moduleInstanceId>
+        <valueType>scalar</valueType>
+        <parameterId>T.obs</parameterId>
+        <locationSetId>LSTM_Catchments</locationSetId>
+        <timeSeriesType>external historical</timeSeriesType>
+        <timeStep unit="second" multiplier="86400"/>
+        <relativeViewPeriod unit="day" start="-730" end="0"/>
+        <readWriteMode>read only</readWriteMode>
+      </timeSeriesSet>
+
+      <!-- Potential Evapotranspiration -->
+      <timeSeriesSet>
+        <moduleInstanceId>ImportMeteo</moduleInstanceId>
+        <valueType>scalar</valueType>
+        <parameterId>ET.obs</parameterId>
+        <locationSetId>LSTM_Catchments</locationSetId>
+        <timeSeriesType>external historical</timeSeriesType>
+        <timeStep unit="second" multiplier="86400"/>
+        <relativeViewPeriod unit="day" start="-730" end="0"/>
+        <readWriteMode>read only</readWriteMode>
+      </timeSeriesSet>
+
+      <!-- Add more meteorological variables as needed -->
+      
+    </exportTimeSeriesActivity>
+
+    <!-- ================================================================
+         PRE-ADAPTER
+         Converts PI-XML to NeuralHydrology input format
+         ================================================================ -->
+    <executeActivity>
+      <description>NeuralHydrology Pre-Adapter: PI-XML → NH format</description>
+      <command>
+        <executable>python</executable>
+        <arguments>
+          <argument>%BIN_DIR%/pre_adapter.py</argument>
+          <argument>%WORK_DIR%</argument>
+          <argument>%BIN_DIR%/adapter_config.yml</argument>
+        </arguments>
+      </command>
+      <timeOut>300</timeOut>
+      <ignoreDiagnostics>false</ignoreDiagnostics>
+      <diagnosticFile>diag_neuralhydrology.xml</diagnosticFile>
+    </executeActivity>
+
+    <!-- ================================================================
+         MODULE (LSTM Inference)
+         Runs the trained NeuralHydrology model
+         ================================================================ -->
+    <executeActivity>
+      <description>NeuralHydrology LSTM Inference</description>
+      <command>
+        <executable>python</executable>
+        <arguments>
+          <argument>%BIN_DIR%/run_model.py</argument>
+          <argument>%WORK_DIR%</argument>
+          <argument>%BIN_DIR%/adapter_config.yml</argument>
+        </arguments>
+      </command>
+      <timeOut>600</timeOut>
+      <ignoreDiagnostics>false</ignoreDiagnostics>
+      <diagnosticFile>diag_neuralhydrology.xml</diagnosticFile>
+    </executeActivity>
+
+    <!-- ================================================================
+         POST-ADAPTER
+         Converts NeuralHydrology output → PI-XML
+         ================================================================ -->
+    <executeActivity>
+      <description>NeuralHydrology Post-Adapter: NH output → PI-XML</description>
+      <command>
+        <executable>python</executable>
+        <arguments>
+          <argument>%BIN_DIR%/post_adapter.py</argument>
+          <argument>%WORK_DIR%</argument>
+          <argument>%BIN_DIR%/adapter_config.yml</argument>
+        </arguments>
+      </command>
+      <timeOut>300</timeOut>
+      <ignoreDiagnostics>false</ignoreDiagnostics>
+      <diagnosticFile>diag_neuralhydrology.xml</diagnosticFile>
+    </executeActivity>
+
+    <!-- ================================================================
+         IMPORT ACTIVITIES
+         Imports PI-XML results BACK INTO FEWS
+         ================================================================ -->
+    <importTimeSeriesActivity>
+      <importFile>output/output_timeseries.xml</importFile>
+      <timeSeriesSet>
+        <moduleInstanceId>NeuralHydrology_LSTM</moduleInstanceId>
+        <valueType>scalar</valueType>
+        <parameterId>Q.simulated</parameterId>
+        <locationSetId>LSTM_Catchments</locationSetId>
+        <timeSeriesType>simulated forecasting</timeSeriesType>
+        <timeStep unit="second" multiplier="86400"/>
+        <readWriteMode>add originals</readWriteMode>
+      </timeSeriesSet>
+    </importTimeSeriesActivity>
+    
+    <!-- Optional: Import LSTM state for warm-starting -->
+    <!--
+    <importStateActivity>
+      <moduleInstanceId>NeuralHydrology_LSTM</moduleInstanceId>
+      <directory>%WORK_DIR%/output</directory>
+      <stateImportFile>state_out.xml</stateImportFile>
+    </importStateActivity>
+    -->
+
+  </activities>
+
+</generalAdapterRun>
